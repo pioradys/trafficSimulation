@@ -1,0 +1,1 @@
+case class TrafficLight(direction: Direction, var turn: Turn, var light: LightColor)
