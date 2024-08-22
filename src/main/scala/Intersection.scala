@@ -1,11 +1,7 @@
-import TrafficSimulation.intersection
-
-import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Queue
 
 
 class Intersection {
-  // Stan świateł dla każdego kierunku
   var trafficLights: Map[Light, TrafficLight] = Map(
     Light(North, Straight) -> TrafficLight(North, Straight, Red),
     Light(North, Left) -> TrafficLight(North, Left, Red),
@@ -21,7 +17,6 @@ class Intersection {
     Light(West, Right) -> TrafficLight(West, Right, Red),
   )
 
-  // Liczba pojazdów czekających w każdym kierunku
 
   var vehicleNumber: Map[Lane, Int] = Map(
     Lane(North, LeftLane) -> 25,
@@ -42,12 +37,7 @@ class Intersection {
   var vehicleQueueWRight: Queue[Turn] = Queue()
   var vehicleQueueWLeft: Queue[Turn] = Queue()
 
-  val oppositePairs: Seq[(Direction, Direction)] = List(
-    (North, South),
-    (East, West)
-  )
 
-  // Symulacja jednego cyklu świateł
   def simulateCycle(): Unit = {
     while(true) {
       var max = this.vehicleNumber.maxBy(_._2)
@@ -76,13 +66,13 @@ class Intersection {
     }
   }
 
-  // Ustawienie świateł dla danego kierunku
+
   def setLights(light: Light, lightColor: LightColor): Unit = {
     trafficLights(light).light = lightColor
     println(s"$light light is now $lightColor")
   }
 
-  // Dodanie pojazdu do kolejki w danym kierunku
+
   def addVehicle(vehicle: Vehicle): Unit = {
     vehicleNumber =  vehicleNumber.updated(Lane(vehicle.startDirection, vehicle.laneSelection), vehicleNumber(Lane(vehicle.startDirection, vehicle.laneSelection)) + 1)
     vehicle.startDirection match {
@@ -106,7 +96,7 @@ class Intersection {
     }
   }
 
-  // Usunięcie pojazdów z kolejki, gdy światło jest zielone
+
   def clearVehicles(light: Light): Unit = {
     if (trafficLights(light).light == Green && vehicleNumber(Lane(light.direction, light.laneSelection)) > 0) {
       light.direction match {
@@ -152,7 +142,7 @@ class Intersection {
     vehicleNumber= vehicleNumber.updated(Lane(light.direction, light.laneSelection), vehicleNumber(Lane(light.direction, light.laneSelection)) - 1)
   }
 
-  // Wyświetlenie stanu skrzyżowania
+
   def printStatus(): Unit = {
     println("Current traffic lights:")
     trafficLights.foreach { case (direction, light) =>
@@ -197,7 +187,7 @@ class Intersection {
       setLights(Light(direction, Right), Yellow)
       setLights(Light(oppositeDirection, Straight), Yellow)
       setLights(Light(oppositeDirection, Right), Yellow)
-      Thread.sleep(1000) // wartość z przepisów
+      Thread.sleep(2000) // wartość z przepisów
 
 
       setLights(Light(direction, Straight), Red)

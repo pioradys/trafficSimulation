@@ -1,4 +1,3 @@
-// Reprezentacja pojazdu
 case class Vehicle(startDirection: Direction, turn: Turn)
 {
   def laneSelection: LanePosition ={

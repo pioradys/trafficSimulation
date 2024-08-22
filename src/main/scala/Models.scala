@@ -1,4 +1,3 @@
-// Reprezentacja świateł drogowych
 sealed trait LightColor
 
 case object Red extends LightColor
@@ -9,7 +8,6 @@ case object Yellow extends LightColor
 
 case object Green extends LightColor
 
-// Kierunki ruchu na skrzyżowaniu
 sealed trait Direction
 
 case object North extends Direction
