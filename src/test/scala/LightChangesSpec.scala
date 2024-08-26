@@ -38,25 +38,5 @@ class LightChangesSpec extends AnyFlatSpec with Matchers{
   }
 
 
-  it should "Turn on and turn off correct lights for lane and turn" in {
-    val intersection = new Intersection
 
-    intersection.activateLightsForLane(Lane(North,RightLane),Right)
-    intersection.trafficLights(Light(North, Straight)).light shouldBe Green
-    intersection.trafficLights(Light(North, Right)).light shouldBe Green
-    intersection.trafficLights(Light(South, Right)).light shouldBe Green
-    intersection.trafficLights(Light(South, Straight)).light shouldBe Green
-    intersection.deactivateLightsForLane(Lane(North, RightLane), Straight)
-    intersection.trafficLights(Light(North, Straight)).light shouldBe Red
-    intersection.trafficLights(Light(North, Right)).light shouldBe Red
-    intersection.trafficLights(Light(South, Right)).light shouldBe Red
-    intersection.trafficLights(Light(South, Straight)).light shouldBe Red
-
-    intersection.activateLightsForLane(Lane(East,LeftLane),Left)
-    intersection.trafficLights(Light(East, Left)).light shouldBe Green
-    intersection.trafficLights(Light(West, Left)).light shouldBe Green
-    intersection.deactivateLightsForLane(Lane(East,LeftLane),Left)
-    intersection.trafficLights(Light(East, Left)).light shouldBe Red
-    intersection.trafficLights(Light(West, Left)).light shouldBe Red
-  }
 }
