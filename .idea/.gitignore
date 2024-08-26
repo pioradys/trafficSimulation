@@ -2,3 +2,17 @@
 /shelf/
 /workspace.xml
 target/
+.bsp/
+# Ignoruj folder .idea
+.idea/
+
+# Z wyjątkiem ustawień stylu kodu, które mogą być wspólne dla zespołu
+!.idea/codestyles/
+!.idea/inspectionProfiles/
+
+# Ignoruj pliki specyficzne dla konfiguracji IDE
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/vcs.xml
