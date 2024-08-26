@@ -38,7 +38,7 @@ class Intersection {
   var vehicleQueueWLeft: Queue[Turn] = Queue()
 
 
-  def simulateCycle(): Unit = {
+  def timeAlgorithmCycle(): Unit = {
     while (true) {
 
       val min = findMinNonZero(this.vehicleNumber)
@@ -57,18 +57,39 @@ class Intersection {
         case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOn(East, West, Left)
           turnOff(East, West, Left)
       }
-      //      min._1 match {
-      //        case Lane(North, RightLane) | Lane(South, RightLane) => turnOff(North, South, Right)
-      //        case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOff(North, South, Left)
-      //        case Lane(West, RightLane) | Lane(East, RightLane) => turnOff(East, West, Right)
-      //        case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOff(East, West, Left)
-      //      }
-//      min = this.vehicleNumber.minBy(_._2.amount)
       printStatus()
-
     }
+
+
   }
 
+  def quantityAlgorithmCycle(): Unit = {
+    while (true) {
+      var max = this.vehicleNumber.maxBy(_._2.amount)
+      while (true) {
+        max._1 match {
+          case Lane(North, RightLane) | Lane(South, RightLane) => turnOn(North, South, Right)
+          case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOn(North, South, Left)
+          case Lane(West, RightLane) | Lane(East, RightLane) => turnOn(East, West, Right)
+          case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOn(East, West, Left)
+        }
+        var previousMax = max
+        while (previousMax._1 == max._1 && previousMax._2.amount != 0) {
+          previousMax = (max._1, this.vehicleNumber(max._1))
+          max = this.vehicleNumber.maxBy(_._2.amount)
+          Thread.sleep(50)
+        }
+        previousMax._1 match {
+          case Lane(North, RightLane) | Lane(South, RightLane) => turnOff(North, South, Right)
+          case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOff(North, South, Left)
+          case Lane(West, RightLane) | Lane(East, RightLane) => turnOff(East, West, Right)
+          case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOff(East, West, Left)
+        }
+        max = this.vehicleNumber.maxBy(_._2.amount)
+        printStatus()
+      }
+    }
+  }
 
   def setLights(light: Light, lightColor: LightColor): Unit = {
     trafficLights(light).light = lightColor

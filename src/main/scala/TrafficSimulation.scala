@@ -23,5 +23,6 @@ object TrafficSimulation extends App {
     }
   }).start()
 
-  intersection.simulateCycle()
+//  intersection.timeAlgorithmCycle()
+  intersection.quantityAlgorithmCycle()
 }
