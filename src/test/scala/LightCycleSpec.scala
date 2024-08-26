@@ -13,12 +13,12 @@ class LightCycleSpec extends AnyFlatSpec with Matchers{
     intersection.setLights(Light(North, Straight), Green)
     intersection.clearVehicles(Light(North, Right))
     intersection.clearVehicles(Light(North, Straight))
-    intersection.vehicleNumber(Lane(North, RightLane)) should be(2)
+    intersection.vehicleNumber(Lane(North, RightLane)).amount should be(2)
 
     intersection.setLights(Light(North, Right), Green)
     intersection.clearVehicles(Light(North, Right))
     intersection.clearVehicles(Light(North, Straight))
-    intersection.vehicleNumber(Lane(North, RightLane)) should be(0)
+    intersection.vehicleNumber(Lane(North, RightLane)).amount should be(0)
   }
 
 }
