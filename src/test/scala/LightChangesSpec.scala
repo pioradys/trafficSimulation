@@ -1,7 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class LightChangesSpec extends AnyFlatSpec with Matchers{
+class LightChangesSpec extends AnyFlatSpec with Matchers {
   it should "change traffic light states correctly" in {
     val intersection = new Intersection
 
@@ -36,7 +36,6 @@ class LightChangesSpec extends AnyFlatSpec with Matchers{
     intersection.trafficLights(Light(East, Left)).light shouldBe Red
     intersection.trafficLights(Light(West, Left)).light shouldBe Red
   }
-
 
 
 }

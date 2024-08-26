@@ -1,7 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class AlgorithmSpec extends AnyFlatSpec with Matchers{
+class AlgorithmSpec extends AnyFlatSpec with Matchers {
   "An Intersection" should "correctly turn on lights for maximum quantity" in {
     val intersection = new Intersection
 

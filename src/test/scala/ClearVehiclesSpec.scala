@@ -14,7 +14,7 @@ class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(2)
     intersection.waitingVehiclesInfo(Lane(South, LeftLane)).amount should be(0)
 
-    intersection.turnOnLights((Lane(North,RightLane),intersection.waitingVehiclesInfo(Lane(North,RightLane))))
+    intersection.turnOnLights((Lane(North, RightLane), intersection.waitingVehiclesInfo(Lane(North, RightLane))))
     intersection.clearVehicles(Light(North, Right))
     intersection.clearVehicles(Light(North, Straight))
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(0)
@@ -27,7 +27,7 @@ class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(0)
     intersection.waitingVehiclesInfo(Lane(South, LeftLane)).amount should be(0)
 
-    intersection.turnOnLights((Lane(North,RightLane),intersection.waitingVehiclesInfo(Lane(North,RightLane))))
+    intersection.turnOnLights((Lane(North, RightLane), intersection.waitingVehiclesInfo(Lane(North, RightLane))))
     intersection.clearVehicles(Light(North, Right))
     intersection.clearVehicles(Light(North, Straight))
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(0)
@@ -98,7 +98,7 @@ class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
     intersection.vehicleQueueSRight should have size 0
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(1)
 
-    intersection.turnOnLights((Lane(East,RightLane),intersection.waitingVehiclesInfo(Lane(East,RightLane))))
+    intersection.turnOnLights((Lane(East, RightLane), intersection.waitingVehiclesInfo(Lane(East, RightLane))))
     intersection.clearVehicles(Light(North, Right))
 
     intersection.vehicleQueueNLeft should have size 0
