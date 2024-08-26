@@ -8,6 +8,8 @@ case object Yellow extends LightColor
 
 case object Green extends LightColor
 
+case object GreenArrow extends LightColor
+
 sealed trait Direction
 
 case object North extends Direction
