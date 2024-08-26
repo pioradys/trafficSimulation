@@ -18,7 +18,7 @@ class Intersection {
   )
 
 
-  var vehicleNumber: Map[Lane, CarsInfo] = Map(
+  var waitingVehiclesInfo: Map[Lane, CarsInfo] = Map(
     Lane(North, LeftLane) -> CarsInfo(0, 0),
     Lane(North, RightLane) -> CarsInfo(0, 0),
     Lane(South, LeftLane) -> CarsInfo(0, 0),
@@ -28,6 +28,7 @@ class Intersection {
     Lane(West, LeftLane) -> CarsInfo(0, 0),
     Lane(West, RightLane) -> CarsInfo(0, 0),
   )
+
   var vehicleQueueNRight: Queue[Turn] = Queue()
   var vehicleQueueNLeft: Queue[Turn] = Queue()
   var vehicleQueueSRight: Queue[Turn] = Queue()
@@ -46,58 +47,15 @@ class Intersection {
     }
   }
 
-  def activateLightsForLane(lane: Lane, turn: Turn): Unit = {
-    turnOn(lane.direction, oppositeDirection(lane.direction), turn)
-  }
-
-  def deactivateLightsForLane(lane: Lane, turn: Turn): Unit = {
-    turnOff(lane.direction, oppositeDirection(lane.direction), turn)
-  }
-
-  def turnOnLightsForMinimumTime(minNonOpt: (Lane, CarsInfo)): Unit = {
-    minNonOpt._1 match {
-      case Lane(North, RightLane) | Lane(South, RightLane) => activateLightsForLane(Lane(North, RightLane), Right)
-      case Lane(North, LeftLane) | Lane(South, LeftLane) => activateLightsForLane(Lane(North, LeftLane), Left)
-      case Lane(West, RightLane) | Lane(East, RightLane) => activateLightsForLane(Lane(West, RightLane), Right)
-      case Lane(West, LeftLane) | Lane(East, LeftLane) => activateLightsForLane(Lane(West, LeftLane), Left)
-    }
-  }
-
-  def turnOffLightsForMinimumTime(minNonOpt: (Lane, CarsInfo)): Unit = {
-    minNonOpt._1 match {
-      case Lane(North, RightLane) | Lane(South, RightLane) => deactivateLightsForLane(Lane(North, RightLane), Right)
-      case Lane(North, LeftLane) | Lane(South, LeftLane) => deactivateLightsForLane(Lane(North, LeftLane), Left)
-      case Lane(West, RightLane) | Lane(East, RightLane) => deactivateLightsForLane(Lane(West, RightLane), Right)
-      case Lane(West, LeftLane) | Lane(East, LeftLane) => deactivateLightsForLane(Lane(West, LeftLane), Left)
-    }
-  }
-
-  def turnOnLightsForMaximumQuantity(max: (Lane, CarsInfo)): Unit = {
-    max._1 match {
-      case Lane(North, RightLane) | Lane(South, RightLane) => turnOn(max._1.direction, oppositeDirection(max._1.direction), Right)
-      case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOn(max._1.direction, oppositeDirection(max._1.direction), Left)
-      case Lane(West, RightLane) | Lane(East, RightLane) => turnOn(max._1.direction, oppositeDirection(max._1.direction), Right)
-      case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOn(max._1.direction, oppositeDirection(max._1.direction), Left)
-    }
-  }
-
-  def turnOffLightForMaximumQuantity(max: (Lane, CarsInfo)): Unit = {
-    max._1 match {
-      case Lane(North, RightLane) | Lane(South, RightLane) => turnOff(max._1.direction, oppositeDirection(max._1.direction), Right)
-      case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOff(max._1.direction, oppositeDirection(max._1.direction), Left)
-      case Lane(West, RightLane) | Lane(East, RightLane) => turnOff(max._1.direction, oppositeDirection(max._1.direction), Right)
-      case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOff(max._1.direction, oppositeDirection(max._1.direction), Left)
-    }
-  }
 
 
   def timeAlgorithmCycle(): Unit = {
     while (true) {
-      val min = findMinNonZero(this.vehicleNumber)
+      val min = findMinNonZero(this.waitingVehiclesInfo)
       val minNonOpt = min.getOrElse((Lane(North, RightLane), CarsInfo(0, 0)))
 
-      turnOnLightsForMinimumTime(minNonOpt)
-      turnOffLightsForMinimumTime(minNonOpt)
+      turnOnLights(minNonOpt)
+      turnOffLights(minNonOpt)
 
       printStatus()
       Thread.sleep(5000)
@@ -106,25 +64,23 @@ class Intersection {
 
   def quantityAlgorithmCycle(): Unit = {
     while (true) {
-      val min = findMinNonZero(this.vehicleNumber)
+      val maximumWaitTime = 60
+      val min = findMinNonZero(this.waitingVehiclesInfo)
       val minNonOpt = min.getOrElse((Lane(North, RightLane), CarsInfo(0, 0)))
-
-      var max = this.vehicleNumber.maxBy(_._2.amount)
-      if (nanoSecondToSecond(System.nanoTime() - minNonOpt._2.waitingSince) > 30 && minNonOpt._2.waitingSince != 0) {
-        turnOnLightsForMinimumTime(minNonOpt)
-        deactivateLightsForLane(minNonOpt._1, Right)
+      if (nanoSecondToSecond(System.nanoTime() - minNonOpt._2.waitingSince) > maximumWaitTime && minNonOpt._2.waitingSince != 0) {
+        turnOnLights(minNonOpt)
+        turnOffLights(minNonOpt)
       }
-
-      turnOnLightsForMaximumQuantity(max)
+      var max = this.waitingVehiclesInfo.maxBy(_._2.amount)
+      turnOnLights(max)
       var previousMax = max
-      while (previousMax._1 == max._1 && previousMax._2.amount != 0) {
-        previousMax = (max._1, this.vehicleNumber(max._1))
-        max = this.vehicleNumber.maxBy(_._2.amount)
+      while (previousMax._1 == max._1 && (previousMax._2.amount != 0 || (previousMax._2.amount +10 >max._2.amount) )) {
+        previousMax = (max._1, this.waitingVehiclesInfo(max._1))
+        max = this.waitingVehiclesInfo.maxBy(_._2.amount)
         Thread.sleep(50)
       }
-      turnOffLightForMaximumQuantity(previousMax)
-      max = this.vehicleNumber.maxBy(_._2.amount)
-
+      turnOffLights(previousMax)
+      max = this.waitingVehiclesInfo.maxBy(_._2.amount)
       printStatus()
     }
   }
@@ -141,7 +97,7 @@ class Intersection {
       println(s"$direction: ${light.light}")
     }
     println("Vehicle queues:")
-    vehicleNumber.foreach { case (direction, count) =>
+    waitingVehiclesInfo.foreach { case (direction, count) =>
       val time = System.nanoTime()
       println(s"$direction: ${count.amount} vehicles waiting")
       if (count.waitingSince == 0) {
@@ -160,14 +116,14 @@ class Intersection {
 
   def addVehicle(vehicle: Vehicle): Unit = {
     val lane = Lane(vehicle.startDirection, vehicle.laneSelection)
-    val currentCarsInfo = vehicleNumber(lane)
+    val currentCarsInfo = waitingVehiclesInfo(lane)
     val time = System.nanoTime()
     val updatedCarsInfo = if (currentCarsInfo.amount == 0) {
       CarsInfo(currentCarsInfo.amount + 1, time)
     } else {
       CarsInfo(currentCarsInfo.amount + 1, currentCarsInfo.waitingSince)
     }
-    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
+    waitingVehiclesInfo = waitingVehiclesInfo.updated(lane, updatedCarsInfo)
     vehicle.startDirection match {
       case North => vehicle.laneSelection match {
         case RightLane => vehicleQueueNRight = vehicleQueueNRight.enqueue(vehicle.turn)
@@ -191,7 +147,7 @@ class Intersection {
 
 
   def clearVehicles(light: Light): Unit = {
-    if (trafficLights(light).light == Green && vehicleNumber(Lane(light.direction, light.laneSelection)).amount > 0) {
+    if ((trafficLights(light).light == GreenArrow || trafficLights(light).light == Green) && waitingVehiclesInfo(Lane(light.direction, light.laneSelection)).amount > 0) {
       light.direction match {
         case North => light.laneSelection match {
           case RightLane => if (vehicleQueueNRight.headOption.contains(light.turn)) {
@@ -233,12 +189,12 @@ class Intersection {
 
   private def deletingVehicle(light: Light): Unit = {
     val lane = Lane(light.direction, light.laneSelection)
-    val currentCarsInfo = vehicleNumber(lane)
+    val currentCarsInfo = waitingVehiclesInfo(lane)
     var updatedCarsInfo = currentCarsInfo.copy(
       amount = currentCarsInfo.amount - 1
     )
-    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
-    if (vehicleNumber(Lane(light.direction, light.laneSelection)).amount == 0) {
+    waitingVehiclesInfo = waitingVehiclesInfo.updated(lane, updatedCarsInfo)
+    if (waitingVehiclesInfo(Lane(light.direction, light.laneSelection)).amount == 0) {
       updatedCarsInfo = updatedCarsInfo.copy(
         waitingSince = 0
       )
@@ -247,7 +203,7 @@ class Intersection {
         waitingSince = System.nanoTime()
       )
     }
-    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
+    waitingVehiclesInfo = waitingVehiclesInfo.updated(lane, updatedCarsInfo)
   }
 
 
@@ -261,6 +217,19 @@ class Intersection {
       setLights(Light(direction, move), color)
       setLights(Light(oppositeDirection, move), color)
     }
+  }
+
+
+  def turnOnLights(laneData: (Lane, CarsInfo)): Unit = {
+    val (direction, lanePosition) = (laneData._1.direction, laneData._1.lanePosition)
+    val turn = if (lanePosition == RightLane) Right else Left
+    turnOn(direction, oppositeDirection(direction), turn)
+  }
+
+  def turnOffLights(laneData: (Lane, CarsInfo)): Unit = {
+    val (direction, lanePosition) = (laneData._1.direction, laneData._1.lanePosition)
+    val turn = if (lanePosition == RightLane) Right else Left
+    turnOff(direction, oppositeDirection(direction), turn)
   }
 
   def turnOff(direction: Direction, oppositeDirection: Direction, turn: Turn): Unit = {
@@ -282,6 +251,7 @@ class Intersection {
     changeLightsForTurns(direction, oppositeDirection, movements, Green)
     Thread.sleep(5000)
   }
+
 
   //Used Scala version is 2.12.19 where minByOption is not added yet, that's why there is manual implementation for it
   private def minByOption[T, U](seq: Seq[T])(f: T => U)(implicit ord: Ordering[U]): Option[T] = {
