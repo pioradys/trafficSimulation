@@ -18,19 +18,19 @@ class Intersection {
   )
 
 
-  var vehicleNumber: Map[Lane, Int] = Map(
-    Lane(North, LeftLane) -> 25,
-    Lane(North, RightLane) -> 0,
-    Lane(South, LeftLane) -> 0,
-    Lane(South, RightLane) -> 10,
-    Lane(East, LeftLane) -> 0,
-    Lane(East, RightLane) -> 0,
-    Lane(West, LeftLane) -> 0,
-    Lane(West, RightLane) -> 0,
+  var vehicleNumber: Map[Lane, CarsInfo] = Map(
+    Lane(North, LeftLane) -> CarsInfo(0, 0),
+    Lane(North, RightLane) -> CarsInfo(0, 0),
+    Lane(South, LeftLane) -> CarsInfo(0, 0),
+    Lane(South, RightLane) -> CarsInfo(0, 0),
+    Lane(East, LeftLane) -> CarsInfo(0, 0),
+    Lane(East, RightLane) -> CarsInfo(0, 0),
+    Lane(West, LeftLane) -> CarsInfo(0, 0),
+    Lane(West, RightLane) -> CarsInfo(0, 0),
   )
   var vehicleQueueNRight: Queue[Turn] = Queue()
-  var vehicleQueueNLeft: Queue[Turn] = Queue(Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left,Left)
-  var vehicleQueueSRight: Queue[Turn] = Queue(Right,Right,Right,Right,Right,Right,Right,Right,Right,Right)
+  var vehicleQueueNLeft: Queue[Turn] = Queue()
+  var vehicleQueueSRight: Queue[Turn] = Queue()
   var vehicleQueueSLeft: Queue[Turn] = Queue()
   var vehicleQueueERight: Queue[Turn] = Queue()
   var vehicleQueueELeft: Queue[Turn] = Queue()
@@ -38,9 +38,34 @@ class Intersection {
   var vehicleQueueWLeft: Queue[Turn] = Queue()
 
 
-  def simulateCycle(): Unit = {
-    while(true) {
-      var max = this.vehicleNumber.maxBy(_._2)
+  def timeAlgorithmCycle(): Unit = {
+    while (true) {
+
+      val min = findMinNonZero(this.vehicleNumber)
+      val minNonOpt=min match {
+        case Some(minValue) => minValue
+        case None => (Lane(North,RightLane),CarsInfo(0,0))
+      }
+
+      minNonOpt._1 match {
+        case Lane(North, RightLane) | Lane(South, RightLane) => turnOn(North, South, Right)
+          turnOff(North, South, Right)
+        case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOn(North, South, Left)
+          turnOff(North, South, Left)
+        case Lane(West, RightLane) | Lane(East, RightLane) => turnOn(East, West, Right)
+          turnOff(East, West, Right)
+        case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOn(East, West, Left)
+          turnOff(East, West, Left)
+      }
+      printStatus()
+    }
+
+
+  }
+
+  def quantityAlgorithmCycle(): Unit = {
+    while (true) {
+      var max = this.vehicleNumber.maxBy(_._2.amount)
       while (true) {
         max._1 match {
           case Lane(North, RightLane) | Lane(South, RightLane) => turnOn(North, South, Right)
@@ -49,23 +74,22 @@ class Intersection {
           case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOn(East, West, Left)
         }
         var previousMax = max
-        while (previousMax._1 == max._1 && previousMax._2 != 0) {
+        while (previousMax._1 == max._1 && previousMax._2.amount != 0) {
           previousMax = (max._1, this.vehicleNumber(max._1))
-          max = this.vehicleNumber.maxBy(_._2)
+          max = this.vehicleNumber.maxBy(_._2.amount)
           Thread.sleep(50)
         }
-        max._1 match {
+        previousMax._1 match {
           case Lane(North, RightLane) | Lane(South, RightLane) => turnOff(North, South, Right)
           case Lane(North, LeftLane) | Lane(South, LeftLane) => turnOff(North, South, Left)
           case Lane(West, RightLane) | Lane(East, RightLane) => turnOff(East, West, Right)
           case Lane(West, LeftLane) | Lane(East, LeftLane) => turnOff(East, West, Left)
         }
-        max = this.vehicleNumber.maxBy(_._2)
+        max = this.vehicleNumber.maxBy(_._2.amount)
         printStatus()
       }
     }
   }
-
 
   def setLights(light: Light, lightColor: LightColor): Unit = {
     trafficLights(light).light = lightColor
@@ -74,7 +98,15 @@ class Intersection {
 
 
   def addVehicle(vehicle: Vehicle): Unit = {
-    vehicleNumber =  vehicleNumber.updated(Lane(vehicle.startDirection, vehicle.laneSelection), vehicleNumber(Lane(vehicle.startDirection, vehicle.laneSelection)) + 1)
+    val lane = Lane(vehicle.startDirection, vehicle.laneSelection)
+    val currentCarsInfo = vehicleNumber(lane)
+    val time = System.nanoTime()
+    val updatedCarsInfo = if (currentCarsInfo.amount == 0) {
+      CarsInfo(currentCarsInfo.amount + 1, time)
+    } else {
+      CarsInfo(currentCarsInfo.amount + 1, currentCarsInfo.waitingSince)
+    }
+    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
     vehicle.startDirection match {
       case North => vehicle.laneSelection match {
         case RightLane => vehicleQueueNRight = vehicleQueueNRight.enqueue(vehicle.turn)
@@ -98,7 +130,7 @@ class Intersection {
 
 
   def clearVehicles(light: Light): Unit = {
-    if (trafficLights(light).light == Green && vehicleNumber(Lane(light.direction, light.laneSelection)) > 0) {
+    if (trafficLights(light).light == Green && vehicleNumber(Lane(light.direction, light.laneSelection)).amount > 0) {
       light.direction match {
         case North => light.laneSelection match {
           case RightLane => if (vehicleQueueNRight.headOption.contains(light.turn)) {
@@ -134,12 +166,27 @@ class Intersection {
         }
         case _ => throw InvalidDirectionException(s"Invalid direction: ${light.direction}")
       }
-      Thread.sleep(50)
+      Thread.sleep(500)
     }
   }
 
   private def deletingVehicle(light: Light): Unit = {
-    vehicleNumber= vehicleNumber.updated(Lane(light.direction, light.laneSelection), vehicleNumber(Lane(light.direction, light.laneSelection)) - 1)
+    val lane = Lane(light.direction, light.laneSelection)
+    val currentCarsInfo = vehicleNumber(lane)
+    var updatedCarsInfo = currentCarsInfo.copy(
+      amount = currentCarsInfo.amount - 1
+    )
+    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
+    if (vehicleNumber(Lane(light.direction, light.laneSelection)).amount == 0) {
+      updatedCarsInfo = updatedCarsInfo.copy(
+        waitingSince = 0
+      )
+    } else {
+      updatedCarsInfo = updatedCarsInfo.copy(
+        waitingSince = System.nanoTime()
+      )
+    }
+    vehicleNumber = vehicleNumber.updated(lane, updatedCarsInfo)
   }
 
 
@@ -150,61 +197,59 @@ class Intersection {
     }
     println("Vehicle queues:")
     vehicleNumber.foreach { case (direction, count) =>
-      println(s"$direction: $count vehicles waiting")
+      val time = System.nanoTime()
+      println(s"$direction: ${count.amount} vehicles waiting")
+      if (count.waitingSince == 0) {
+        println(s"$direction: vehicle waiting for 0")
+      } else {
+        println(s"$direction: vehicle waiting for ${(time - count.waitingSince) / 1000000000}")
+      }
+
     }
   }
 
-  def turnOn(direction: Direction, oppositeDirection: Direction, turn: Turn): Unit = {
-    if (turn == Right || turn == Straight) {
-      setLights(Light(direction, Straight), RedYellow)
-      setLights(Light(direction, Right), RedYellow)
-      setLights(Light(oppositeDirection, Straight), RedYellow)
-      setLights(Light(oppositeDirection, Right), RedYellow)
-      Thread.sleep(1000) // wartość z przepisów
-
-
-      setLights(Light(direction, Straight), Green)
-      setLights(Light(direction, Right), Green)
-      setLights(Light(oppositeDirection, Straight), Green)
-      setLights(Light(oppositeDirection, Right), Green)
-      Thread.sleep(5000)
-    } else {
-      setLights(Light(direction, Left), RedYellow)
-      setLights(Light(oppositeDirection, Left), RedYellow)
-      Thread.sleep(1000) // wartość z przepisów
-
-
-      setLights(Light(direction, Left), Green)
-      setLights(Light(oppositeDirection, Left), Green)
-      Thread.sleep(5000)
-
+  def changeLightsForTurns(
+                            direction: Direction,
+                            oppositeDirection: Direction,
+                            movements: List[Turn],
+                            color: LightColor
+                          ): Unit = {
+    movements.foreach { move =>
+      setLights(Light(direction, move), color)
+      setLights(Light(oppositeDirection, move), color)
     }
   }
 
   def turnOff(direction: Direction, oppositeDirection: Direction, turn: Turn): Unit = {
-    if (turn == Right || turn == Straight) {
-      setLights(Light(direction, Straight), Yellow)
-      setLights(Light(direction, Right), Yellow)
-      setLights(Light(oppositeDirection, Straight), Yellow)
-      setLights(Light(oppositeDirection, Right), Yellow)
-      Thread.sleep(2000) // wartość z przepisów
+    val movements = if (turn == Right || turn == Straight) List(Straight, Right) else List(Left)
 
+    changeLightsForTurns(direction, oppositeDirection, movements, Yellow)
+    Thread.sleep(2000) // wartość z przepisów
 
-      setLights(Light(direction, Straight), Red)
-      setLights(Light(direction, Right), Red)
-      setLights(Light(oppositeDirection, Straight), Red)
-      setLights(Light(oppositeDirection, Right), Red)
-      Thread.sleep(5000)
-    } else {
-      setLights(Light(direction, Left), Yellow)
-      setLights(Light(oppositeDirection, Left), Yellow)
-      Thread.sleep(2000) // wartość z przepisów
-
-
-      setLights(Light(direction, Left), Red)
-      setLights(Light(oppositeDirection, Left), Red)
-      Thread.sleep(5000)
-    }
+    changeLightsForTurns(direction, oppositeDirection, movements, Red)
+    Thread.sleep(5000)
   }
+
+  def turnOn(direction: Direction, oppositeDirection: Direction, turn: Turn): Unit = {
+    val movements = if (turn == Right || turn == Straight) List(Straight, Right) else List(Left)
+
+    changeLightsForTurns(direction, oppositeDirection, movements, RedYellow)
+    Thread.sleep(1000) // wartość z przepisów
+
+    changeLightsForTurns(direction, oppositeDirection, movements, Green)
+    Thread.sleep(5000)
+  }
+  //Used Scala version is 2.12.19 where minByOption is not added yet, that's why there is manual implementation for it
+  def minByOption[T, U](seq: Seq[T])(f: T => U)(implicit ord: Ordering[U]): Option[T] = {
+    if (seq.isEmpty) None
+    else Some(seq.minBy(f))
+  }
+
+  def findMinNonZero(vehicleNumber: Map[Lane, CarsInfo]): Option[(Lane, CarsInfo)] = {
+    minByOption(vehicleNumber.toSeq.filter(_._2.waitingSince > 0))(_._2.waitingSince)
+  }
+
+
+
 
 }
