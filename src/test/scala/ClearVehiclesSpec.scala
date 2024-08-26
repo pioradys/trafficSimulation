@@ -3,7 +3,7 @@ import org.scalatest.matchers.should.Matchers
 
 class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
 
-  "An Intersection" should "removing vehicles from the queue when the light is green" in {
+  "An Intersection" should "add vehicles to queue and remove vehicles from the queue when the light is green" in {
     val intersection = new Intersection
 
     intersection.addVehicle(Vehicle(North, Left))
@@ -12,6 +12,19 @@ class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
 
     intersection.waitingVehiclesInfo(Lane(North, LeftLane)).amount should be(1)
     intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(2)
+    intersection.waitingVehiclesInfo(Lane(South, LeftLane)).amount should be(0)
+
+    intersection.turnOnLights((Lane(North,RightLane),intersection.waitingVehiclesInfo(Lane(North,RightLane))))
+    intersection.clearVehicles(Light(North, Right))
+    intersection.clearVehicles(Light(North, Straight))
+    intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(0)
+  }
+
+  it should "do nothing when there are no cars" in {
+    val intersection = new Intersection
+
+    intersection.waitingVehiclesInfo(Lane(North, LeftLane)).amount should be(0)
+    intersection.waitingVehiclesInfo(Lane(North, RightLane)).amount should be(0)
     intersection.waitingVehiclesInfo(Lane(South, LeftLane)).amount should be(0)
 
     intersection.turnOnLights((Lane(North,RightLane),intersection.waitingVehiclesInfo(Lane(North,RightLane))))
