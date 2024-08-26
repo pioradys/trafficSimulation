@@ -38,7 +38,7 @@ class Intersection {
   var vehicleQueueWRight: Queue[Turn] = Queue()
   var vehicleQueueWLeft: Queue[Turn] = Queue()
 
-  def oppositeDirection(direction: Direction): Direction = {
+  private def oppositeDirection(direction: Direction): Direction = {
     direction match {
       case North => South
       case South => North
@@ -118,74 +118,95 @@ class Intersection {
     val lane = Lane(vehicle.startDirection, vehicle.laneSelection)
     val currentCarsInfo = waitingVehiclesInfo(lane)
     val time = System.nanoTime()
-    val updatedCarsInfo = if (currentCarsInfo.amount == 0) {
-      CarsInfo(currentCarsInfo.amount + 1, time)
-    } else {
-      CarsInfo(currentCarsInfo.amount + 1, currentCarsInfo.waitingSince)
-    }
+
+    val updatedCarsInfo = CarsInfo(
+      amount = currentCarsInfo.amount + 1,
+      waitingSince = if (currentCarsInfo.amount == 0) time else currentCarsInfo.waitingSince
+    )
     waitingVehiclesInfo = waitingVehiclesInfo.updated(lane, updatedCarsInfo)
+
+    enqueueVehicle(vehicle)
+  }
+
+  private def enqueueVehicle(vehicle: Vehicle): Unit = {
+    val (updatedRightQueue, updatedLeftQueue) = vehicle.startDirection match {
+      case North => updateQueue(vehicle.laneSelection, vehicle.turn, vehicleQueueNRight, vehicleQueueNLeft)
+      case South => updateQueue(vehicle.laneSelection, vehicle.turn, vehicleQueueSRight, vehicleQueueSLeft)
+      case East  => updateQueue(vehicle.laneSelection, vehicle.turn, vehicleQueueERight, vehicleQueueELeft)
+      case West  => updateQueue(vehicle.laneSelection, vehicle.turn, vehicleQueueWRight, vehicleQueueWLeft)
+      case _     => throw InvalidDirectionException(s"Invalid direction: ${vehicle.startDirection}")
+    }
+
     vehicle.startDirection match {
-      case North => vehicle.laneSelection match {
-        case RightLane => vehicleQueueNRight = vehicleQueueNRight.enqueue(vehicle.turn)
-        case LeftLane => vehicleQueueNLeft = vehicleQueueNLeft.enqueue(vehicle.turn)
-      }
-      case South => vehicle.laneSelection match {
-        case RightLane => vehicleQueueSRight = vehicleQueueSRight.enqueue(vehicle.turn)
-        case LeftLane => vehicleQueueSLeft = vehicleQueueSLeft.enqueue(vehicle.turn)
-      }
-      case East => vehicle.laneSelection match {
-        case RightLane => vehicleQueueERight = vehicleQueueERight.enqueue(vehicle.turn)
-        case LeftLane => vehicleQueueELeft = vehicleQueueELeft.enqueue(vehicle.turn)
-      }
-      case West => vehicle.laneSelection match {
-        case RightLane => vehicleQueueWRight = vehicleQueueWRight.enqueue(vehicle.turn)
-        case LeftLane => vehicleQueueWLeft = vehicleQueueWLeft.enqueue(vehicle.turn)
-      }
-      case _ => throw InvalidDirectionException(s"Invalid direction: ${vehicle.startDirection}")
+      case North =>
+        vehicleQueueNRight = updatedRightQueue
+        vehicleQueueNLeft = updatedLeftQueue
+      case South =>
+        vehicleQueueSRight = updatedRightQueue
+        vehicleQueueSLeft = updatedLeftQueue
+      case East =>
+        vehicleQueueERight = updatedRightQueue
+        vehicleQueueELeft = updatedLeftQueue
+      case West =>
+        vehicleQueueWRight = updatedRightQueue
+        vehicleQueueWLeft = updatedLeftQueue
     }
   }
+
+
+  private def updateQueue(laneSelection: LanePosition, turn: Turn, rightQueue: Queue[Turn], leftQueue: Queue[Turn]): (Queue[Turn], Queue[Turn]) = {
+    laneSelection match {
+      case RightLane => (rightQueue.enqueue(turn), leftQueue)
+      case LeftLane  => (rightQueue, leftQueue.enqueue(turn))
+    }
+  }
+
+
 
 
   def clearVehicles(light: Light): Unit = {
-    if ((trafficLights(light).light == GreenArrow || trafficLights(light).light == Green) && waitingVehiclesInfo(Lane(light.direction, light.laneSelection)).amount > 0) {
-      light.direction match {
-        case North => light.laneSelection match {
-          case RightLane => if (vehicleQueueNRight.headOption.contains(light.turn)) {
-            vehicleQueueNRight = vehicleQueueNRight.drop(1)
-            deletingVehicle(light)
-          }
-          case LeftLane => vehicleQueueNLeft = vehicleQueueNLeft.drop(1)
-            deletingVehicle(light)
-        }
-        case South => light.laneSelection match {
-          case RightLane => if (vehicleQueueSRight.headOption.contains(light.turn)) {
-            vehicleQueueSRight = vehicleQueueSRight.drop(1)
-            deletingVehicle(light)
-          }
-          case LeftLane => vehicleQueueSLeft = vehicleQueueSLeft.drop(1)
-            deletingVehicle(light)
-        }
-        case East => light.laneSelection match {
-          case RightLane => if (vehicleQueueERight.headOption.contains(light.turn)) {
-            vehicleQueueERight = vehicleQueueERight.drop(1)
-            deletingVehicle(light)
-          }
-          case LeftLane => vehicleQueueELeft = vehicleQueueELeft.drop(1)
-            deletingVehicle(light)
-        }
-        case West => light.laneSelection match {
-          case RightLane => if (vehicleQueueWRight.headOption.contains(light.turn)) {
-            vehicleQueueWRight = vehicleQueueWRight.drop(1)
-            deletingVehicle(light)
-          }
-          case LeftLane => vehicleQueueWLeft = vehicleQueueWLeft.drop(1)
-            deletingVehicle(light)
-        }
-        case _ => throw InvalidDirectionException(s"Invalid direction: ${light.direction}")
+    if (( trafficLights(light).light == Green) &&      waitingVehiclesInfo(Lane(light.direction, light.laneSelection)).amount > 0) {
+
+      val vehicleQueue = getVehicleQueue(light.direction, light.laneSelection)
+
+      if (light.laneSelection == RightLane && vehicleQueue.headOption.contains(light.turn) ||
+        light.laneSelection == LeftLane) {
+        updateVehicleQueue(light.direction, light.laneSelection)
+        deletingVehicle(light)
       }
+
       Thread.sleep(100)
     }
   }
+
+  private def getVehicleQueue(direction: Direction, laneSelection: LanePosition): Queue[Turn] = {
+    (direction, laneSelection) match {
+      case (North, RightLane) => vehicleQueueNRight
+      case (North, LeftLane)  => vehicleQueueNLeft
+      case (South, RightLane) => vehicleQueueSRight
+      case (South, LeftLane)  => vehicleQueueSLeft
+      case (East, RightLane)  => vehicleQueueERight
+      case (East, LeftLane)   => vehicleQueueELeft
+      case (West, RightLane)  => vehicleQueueWRight
+      case (West, LeftLane)   => vehicleQueueWLeft
+      case _ => throw InvalidDirectionException(s"Invalid direction: $direction")
+    }
+  }
+
+  private def updateVehicleQueue(direction: Direction, laneSelection: LanePosition): Unit = {
+    (direction, laneSelection) match {
+      case (North, RightLane) => vehicleQueueNRight = vehicleQueueNRight.drop(1)
+      case (North, LeftLane)  => vehicleQueueNLeft = vehicleQueueNLeft.drop(1)
+      case (South, RightLane) => vehicleQueueSRight = vehicleQueueSRight.drop(1)
+      case (South, LeftLane)  => vehicleQueueSLeft = vehicleQueueSLeft.drop(1)
+      case (East, RightLane)  => vehicleQueueERight = vehicleQueueERight.drop(1)
+      case (East, LeftLane)   => vehicleQueueELeft = vehicleQueueELeft.drop(1)
+      case (West, RightLane)  => vehicleQueueWRight = vehicleQueueWRight.drop(1)
+      case (West, LeftLane)   => vehicleQueueWLeft = vehicleQueueWLeft.drop(1)
+      case _ => throw InvalidDirectionException(s"Invalid direction: $direction")
+    }
+  }
+
 
   private def deletingVehicle(light: Light): Unit = {
     val lane = Lane(light.direction, light.laneSelection)
