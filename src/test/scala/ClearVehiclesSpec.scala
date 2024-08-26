@@ -26,18 +26,48 @@ class ClearVehiclesSpec extends AnyFlatSpec with Matchers {
   }
 
 
+  it should "not process vehicles when the light is not green" in {
+    val intersection = new Intersection
 
-    it should "not process vehicles when the light is red" in {
-      val intersection = new Intersection
+    intersection.addVehicle(Vehicle(North, Left))
 
+    intersection.turnOff(North, South, Left)
+    intersection.clearVehicles(Light(North, Left))
 
-      intersection.addVehicle(Vehicle(North, Left))
+    intersection.vehicleQueueNLeft should have size 1
+    intersection.vehicleQueueSLeft should have size 0
+    intersection.vehicleQueueELeft should have size 0
+    intersection.vehicleQueueWLeft should have size 0
+    intersection.vehicleQueueNRight should have size 0
+    intersection.vehicleQueueERight should have size 0
+    intersection.vehicleQueueWRight should have size 0
+    intersection.vehicleQueueSRight should have size 0
+    intersection.vehicleNumber(Lane(North, LeftLane)).amount should be(1)
 
+    intersection.setLights(Light(North, Left), Yellow)
+    intersection.clearVehicles(Light(North, Left))
 
-      intersection.turnOff(North,South,Left)
-      intersection.clearVehicles(Light(North,Left))
+    intersection.vehicleQueueNLeft should have size 1
+    intersection.vehicleQueueSLeft should have size 0
+    intersection.vehicleQueueELeft should have size 0
+    intersection.vehicleQueueWLeft should have size 0
+    intersection.vehicleQueueNRight should have size 0
+    intersection.vehicleQueueERight should have size 0
+    intersection.vehicleQueueWRight should have size 0
+    intersection.vehicleQueueSRight should have size 0
+    intersection.vehicleNumber(Lane(North, LeftLane)).amount should be(1)
 
-      intersection.vehicleQueueNLeft should have size 1
-      intersection.vehicleNumber(Lane(North,LeftLane)).amount should be (1)
-    }
+    intersection.setLights(Light(North, Left), RedYellow)
+    intersection.clearVehicles(Light(North, Left))
+
+    intersection.vehicleQueueNLeft should have size 1
+    intersection.vehicleQueueSLeft should have size 0
+    intersection.vehicleQueueELeft should have size 0
+    intersection.vehicleQueueWLeft should have size 0
+    intersection.vehicleQueueNRight should have size 0
+    intersection.vehicleQueueERight should have size 0
+    intersection.vehicleQueueWRight should have size 0
+    intersection.vehicleQueueSRight should have size 0
+    intersection.vehicleNumber(Lane(North, LeftLane)).amount should be(1)
+  }
 }
